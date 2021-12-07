@@ -6,24 +6,24 @@ _kanji() {
 	curl -s "$query" > $tempFile
 
 	# Print kanji
-	echo -e "\e[1mKanji:\e[0m $word"
+	echo "Kanji: $word"
 
 	# Get on readings
-	echo -e "\e[1mOn:\e[0m $(grep -A 2 "On:" $tempFile | sed 's/^[[:space:]]*//g' | awk '/^<a href/' | sed 's/ /;/g; s/<a;href="[A-Za-z0-9\.\/%]*">//g; s/\.//g; s/<\/a>&#[0-9]*;//g; s/<\/a>//g; s/;/, /g')"
+	echo "On: $(grep -A 2 "On:" $tempFile | sed 's/^[[:space:]]*//g' | awk '/^<a href/' | sed 's/ /;/g; s/<a;href="[A-Za-z0-9\.\/%]*">//g; s/\.//g; s/<\/a>&#[0-9]*;//g; s/<\/a>//g; s/;/, /g')"
 
 	# Get kun readings
-	echo -e "\e[1mKun:\e[0m $(grep -A 2 "Kun:" $tempFile | sed 's/^[[:space:]]*//g' | awk '/^<a href/' | sed 's/ /;/g; s/<a;href="[A-Za-z0-9\.\/%]*">//g; s/\.//g; s/<\/a>&#[0-9]*;//g; s/<\/a>//g; s/;/, /g')"
+	echo "Kun: $(grep -A 2 "Kun:" $tempFile | sed 's/^[[:space:]]*//g' | awk '/^<a href/' | sed 's/ /;/g; s/<a;href="[A-Za-z0-9\.\/%]*">//g; s/\.//g; s/<\/a>&#[0-9]*;//g; s/<\/a>//g; s/;/, /g')"
 	
 
 	# Get translation
-	echo -en "\e[1mTranslation:\e[0m "
+	echo -en "Translation: "
 	grep -A 1 "kanji-details__main-meanings" $tempFile | sed 's/^[[:space:]]*//g; /<div/d'
 
 	# Image search
-	echo -en "\n\e[1mImage search:\e[0m "
+	echo -en "\nImage search: "
 	echo "https://duckduckgo.com/?t=ffab&q=$search&iax=images&ia=images"
 	
-	echo -e "\e[1mJisho:\e[0m $query"
+	echo -e "Jisho: $query"
 }
 
 _translate() {
@@ -38,25 +38,43 @@ _translate() {
 
 	if [[ "$japanese" == "$reading" ]]
 	then
-		echo -e "\e[1mJapanese\e[0m:\n$japanese\n"
+		echo -e "Japanese:\n$japanese\n"
 	else
-		echo -e "\e[1mJapanese\e[0m:\n$japanese [$reading]\n"
+		echo -e "Japanese:\n$japanese [$reading]\n"
 	fi
-	echo -e "\e[1mEnglish\e[0m:\n$english\n"
-	echo -e "\e[1mJLPT\e[0m: $jlpt"
-	echo "https://jisho.org/search/$search"
+	echo -e "English:\n$english\n"
+	echo -e "JLPT: $jlpt"
+	[ "$raw" != "true" ] && echo "https://jisho.org/search/$search"
 }
 
 _printHelp() {
 	echo "Usage: jisho [OPTION] search_query"
 	echo "Without any options, the default behavior is to query the first argument. Remember to use quotes if there are spaces in the query!"
 	echo -e "\t-k\tPrint kanji info"
+	echo -e "\t-r\tTranslate but don't print the jisho link"
 }
 
 case $1 in
 	-k)
 		word="$2"
 		_kanji
+		;;
+
+	-r)
+		# Print raw without too much extra bling
+		shift
+		word="$1"
+		raw=true
+		_translate
+		;;
+
+	-n)
+		# Translate selected text and show the result in a notification
+		shift
+		word="$(xclip -o)"
+		raw=true
+		result=$(_translate)
+		notify-send -t 10000 "Jisho" "$result"
 		;;
 
 	--help | -help | --h | -h)
