@@ -29,7 +29,7 @@ _kanji() {
 _kanjilist() {
 	search=$(echo $word | jq -sRr @uri | sed 's/%0A$//g')
 	query="https://jisho.org/search/$search"
-	result=$(curl -s $query | grep -A 10 "character" | sed 's/^[[:space:]]*//g; s/<span class="character.*kanji">//g; s|</a></span>||g; /span class/d; /div/d; /^$/d; /--/d')
+	result=$(curl -s $query | grep -A 10 "character" | sed 's/^[[:space:]]*//g; s/<span class="character.*kanji">//g; s|</a></span>||g; /span class/d; /div/d; /^$/d; /--/d; /a class=/d')
 
 	IFS=$(echo -e "\n\b")
 	firstLine=false
@@ -47,7 +47,7 @@ _kanjilist() {
 		fi
 	done
 
-	echo "$final"
+	echo "$final" | sed 's/, $//'
 }
 
 _translate() {
