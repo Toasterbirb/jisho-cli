@@ -26,6 +26,30 @@ _kanji() {
 	echo -e "Jisho: $query"
 }
 
+_kanjilist() {
+	search=$(echo $word | jq -sRr @uri | sed 's/%0A$//g')
+	query="https://jisho.org/search/$search"
+	result=$(curl -s $query | grep -A 10 "character" | sed 's/^[[:space:]]*//g; s/<span class="character.*kanji">//g; s|</a></span>||g; /span class/d; /div/d; /^$/d; /--/d')
+
+	IFS=$(echo -e "\n\b")
+	firstLine=false
+	for i in $result
+	do
+		if [[ "$firstLine" == "false" ]]
+		then
+			final="${final}${i}: "
+			firstLine=true
+		elif [[ "$(grep "<span>" <<< $i)" ]]
+		then
+			final="$final$(sed 's/<span>//g; s|</span>||g' <<< $i)"
+		else
+			final=$(echo -e "$final\n$i: ")
+		fi
+	done
+
+	echo "$final"
+}
+
 _translate() {
 	search=$(echo $word | jq -sRr @uri | sed 's/%0A$//g')
 	query="https://jisho.org/api/v1/search/words?keyword=$search"
@@ -51,6 +75,7 @@ _printHelp() {
 	echo "Usage: jisho [OPTION] search_query"
 	echo "Without any options, the default behavior is to query the first argument. Remember to use quotes if there are spaces in the query!"
 	echo -e "\t-k\tPrint kanji info"
+	echo -e "\t-kl\tPrint translations for all of the kanji in the given word"
 	echo -e "\t-r\tTranslate but don't print the jisho link"
 }
 
@@ -58,6 +83,11 @@ case $1 in
 	-k)
 		word="$2"
 		_kanji
+		;;
+
+	-kl)
+		word="$2"
+		_kanjilist
 		;;
 
 	-r)
