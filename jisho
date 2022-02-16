@@ -47,7 +47,7 @@ _kanjilist() {
 		fi
 	done
 
-	echo "$final" | sed 's/, $//'
+	echo "$final" | sed 's/, $//; /^</d'
 }
 
 _translate() {
