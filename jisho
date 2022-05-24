@@ -13,7 +13,7 @@ _kanji() {
 
 	# Get kun readings
 	echo "Kun: $(grep -A 2 "Kun:" $tempFile | sed 's/^[[:space:]]*//g' | awk '/^<a href/' | sed 's/ /;/g; s/<a;href="[A-Za-z0-9\.\/%]*">//g; s/\.//g; s/<\/a>&#[0-9]*;//g; s/<\/a>//g; s/;/, /g')"
-	
+
 
 	# Get translation
 	echo -en "Translation: "
@@ -22,7 +22,7 @@ _kanji() {
 	# Image search
 	echo -en "\nImage search: "
 	echo "https://duckduckgo.com/?t=ffab&q=$search&iax=images&ia=images"
-	
+
 	echo -e "Jisho: $query"
 }
 
@@ -60,23 +60,31 @@ _translate() {
 	english=$(echo $data | jq '.data[0] .senses[0] .english_definitions' | sed '/\[/d; /\]/d; s/  "//g; s/,//g; s/"//g')
 	jlpt=$(echo $data | jq '.data[0] .jlpt[0]' | sed '/\[/d; /\]/d; s/  "//g; s/,//g; s/"//g; s/n/N/g' | cut -d'-' -f2)
 
-	if [[ "$japanese" == "$reading" ]]
+	if [[ "$en_only" == "true" ]]
 	then
-		echo -e "Japanese:\n$japanese\n"
+		# Print english only
+		echo "$english"
 	else
-		echo -e "Japanese:\n$japanese [$reading]\n"
+		if [[ "$japanese" == "$reading" ]]
+		then
+			echo -e "Japanese:\n$japanese\n"
+		else
+			echo -e "Japanese:\n$japanese [$reading]\n"
+		fi
+		echo -e "English:\n$english\n"
+		echo -e "JLPT: $jlpt"
+		[ "$raw" != "true" ] && echo "https://jisho.org/search/$search"
 	fi
-	echo -e "English:\n$english\n"
-	echo -e "JLPT: $jlpt"
-	[ "$raw" != "true" ] && echo "https://jisho.org/search/$search"
 }
 
 _printHelp() {
 	echo "Usage: jisho [OPTION] search_query"
-	echo "Without any options, the default behavior is to query the first argument. Remember to use quotes if there are spaces in the query!"
+	echo -e "Without any options, the default behavior is to query the first argument.\nRemember to use quotes if there are spaces in the query!"
+	echo -e "\nOptions:"
 	echo -e "\t-k\tPrint kanji info"
 	echo -e "\t-kl\tPrint translations for all of the kanji in the given word"
 	echo -e "\t-r\tTranslate but don't print the jisho link"
+	echo -e "\t-e\tPrint only the English translations (useful for scripting)"
 }
 
 case $1 in
@@ -98,6 +106,13 @@ case $1 in
 		_translate
 		;;
 
+	-e)
+		shift
+		word="$1"
+		en_only=true
+		_translate
+		;;
+
 	-n)
 		# Translate selected text and show the result in a notification
 		shift
@@ -111,7 +126,7 @@ case $1 in
 		_printHelp
 		;;
 
-	*) 	
+	*)
 		word="$1"
 		_translate
 		;;
