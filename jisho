@@ -55,7 +55,7 @@ _translate() {
 	query="https://jisho.org/api/v1/search/words?keyword=$search"
 
 	data="$(curl -s $query)"
-	japanese=$(echo $data | jq | awk '/slug/ {print $2}' | head -n 1 | sed 's/,//g; s/"//g')
+	japanese=$(echo $data | jq | awk '/slug/ {print $2}' | head -n 1 | sed 's/,//g; s/"//g; s/-1//g')
 	reading=$(echo $data | jq '.data[0] .japanese[0] .reading' | sed '/\[/d; /\]/d; s/  "//g; s/,//g; s/"//g')
 	english=$(echo $data | jq '.data[0] .senses[0] .english_definitions' | sed '/\[/d; /\]/d; s/  "//g; s/,//g; s/"//g')
 	jlpt=$(echo $data | jq '.data[0] .jlpt[0]' | sed '/\[/d; /\]/d; s/  "//g; s/,//g; s/"//g; s/n/N/g' | cut -d'-' -f2)
