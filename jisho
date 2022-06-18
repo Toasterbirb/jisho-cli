@@ -75,7 +75,7 @@ _translate() {
 
 		if [[ "$en_translate" == "true" ]]
 		then
-			echo -e "$target_language:\n$(echo "$english" | trans -b en:${target_language})\n"
+			echo -e "$target_language:\n$(echo "$english" | trans -b en:${target_language} | uniq -u)\n"
 		fi
 
 		echo -e "JLPT: $jlpt"
