@@ -1,9 +1,19 @@
 #!/bin/bash
+CACHE_DIR="$HOME/.cache/jisho_cache"
+mkdir -p "$CACHE_DIR"
+
+_query_cache() {
+	# Handle caching by using a md5 hash
+	MD5="$(echo $1 | md5sum | cut -d' ' -f1)"
+	tempFile="$CACHE_DIR/$MD5"
+	[[ -f "$tempFile" ]] || curl -s "$query" > $tempFile
+}
+
 _kanji() {
 	search=$(echo $word | jq -sRr @uri | sed 's/%0A$//g')
 	query="https://jisho.org/search/$search%23kanji"
-	tempFile=/tmp/jisho-kanji
-	curl -s "$query" > $tempFile
+
+	_query_cache "$query"
 
 	# Print kanji
 	echo "Kanji: $word"
@@ -29,7 +39,10 @@ _kanji() {
 _kanjilist() {
 	search=$(echo $word | jq -sRr @uri | sed 's/%0A$//g')
 	query="https://jisho.org/search/$search"
-	result=$(curl -s $query | grep -A 10 "character" | sed 's/^[[:space:]]*//g; s/<span class="character.*kanji">//g; s|</a></span>||g; /span class/d; /div/d; /^$/d; /--/d; /a class=/d')
+
+	_query_cache "$query"
+
+	result=$(cat $tempFile | grep -A 10 "character" | sed 's/^[[:space:]]*//g; s/<span class="character.*kanji">//g; s|</a></span>||g; /span class/d; /div/d; /^$/d; /--/d; /a class=/d')
 
 	IFS=$(echo -e "\n\b")
 	firstLine=false
@@ -54,7 +67,9 @@ _translate() {
 	search=$(echo $word | jq -sRr @uri | sed 's/%0A$//g')
 	query="https://jisho.org/api/v1/search/words?keyword=$search"
 
-	data="$(curl -s $query)"
+	_query_cache "$query"
+
+	data="$(cat $tempFile)"
 	japanese=$(echo $data | jq | awk '/slug/ {print $2}' | head -n 1 | sed 's/,//g; s/"//g; s/-1//g')
 	reading=$(echo $data | jq '.data[0] .japanese[0] .reading' | sed '/\[/d; /\]/d; s/  "//g; s/,//g; s/"//g')
 	english=$(echo $data | jq '.data[0] .senses[0] .english_definitions' | sed '/\[/d; /\]/d; s/  "//g; s/,//g; s/"//g')
