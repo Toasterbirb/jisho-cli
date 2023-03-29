@@ -9,6 +9,13 @@ _query_cache() {
 	[[ -f "$tempFile" ]] || curl -s "$query" > $tempFile
 }
 
+_remove_cache() {
+	# Handle caching by using a md5 hash
+	MD5="$(echo $1 | md5sum | cut -d' ' -f1)"
+	tempFile="$CACHE_DIR/$MD5"
+	rm -f "$tempFile"
+}
+
 _kanji() {
 	search=$(echo $word | jq -sRr @uri | sed 's/%0A$//g')
 	query="https://jisho.org/search/$search%23kanji"
@@ -18,22 +25,26 @@ _kanji() {
 	# Print kanji
 	echo "Kanji: $word"
 
-	# Get on readings
-	echo "On: $(grep -A 2 "On:" $tempFile | sed 's/^[[:space:]]*//g' | awk '/^<a href/' | sed 's/ /;/g; s/<a;href="[A-Za-z0-9\.\/%]*">//g; s/\.//g; s/<\/a>&#[0-9]*;//g; s/<\/a>//g; s/;/, /g')"
+	# Get readings
+	ON_YOMI="$(grep -A 2 "On:" $tempFile | sed 's/^[[:space:]]*//g' | awk '/^<a href/' | sed 's/ /;/g; s/<a;href="[A-Za-z0-9\.\/%]*">//g; s/\.//g; s/<\/a>&#[0-9]*;//g; s/<\/a>//g; s/;/, /g')"
+	KUN_YOMI="$(grep -A 2 "Kun:" $tempFile | sed 's/^[[:space:]]*//g' | awk '/^<a href/' | sed 's/ /;/g; s/<a;href="[A-Za-z0-9\.\/%]*">//g; s/\.//g; s/<\/a>&#[0-9]*;//g; s/<\/a>//g; s/;/, /g')"
 
-	# Get kun readings
-	echo "Kun: $(grep -A 2 "Kun:" $tempFile | sed 's/^[[:space:]]*//g' | awk '/^<a href/' | sed 's/ /;/g; s/<a;href="[A-Za-z0-9\.\/%]*">//g; s/\.//g; s/<\/a>&#[0-9]*;//g; s/<\/a>//g; s/;/, /g')"
-
+	echo "On: $ON_YOMI"
+	echo "Kun: $KUN_YOMI"
 
 	# Get translation
-	echo -en "Translation: "
-	grep -A 1 "kanji-details__main-meanings" $tempFile | sed 's/^[[:space:]]*//g; /<div/d'
+	TRANSLATION="$(grep -A 1 "kanji-details__main-meanings" $tempFile | sed 's/^[[:space:]]*//g; /<div/d')"
+	echo -en "Translation: $TRANSLATION"
 
 	# Image search
 	echo -en "\nImage search: "
 	echo "https://duckduckgo.com/?t=ffab&q=$search&iax=images&ia=images"
 
 	echo -e "Jisho: $query"
+
+	# Get rid of the cached result if the translation was missing to prevent
+	# "corrupted" cache
+	[ -z "$TRANSLATION" ] && _remove_cache "$query"
 }
 
 _kanjilist() {
@@ -61,6 +72,10 @@ _kanjilist() {
 	done
 
 	echo "$final" | sed 's/, $//; /^</d'
+
+	# Get rid of the cached result if the result was empty to prevent
+	# "corrupted" cache
+	[ -z "$result" ] && _remove_cache "$query"
 }
 
 _translate() {
@@ -96,6 +111,10 @@ _translate() {
 		echo -e "JLPT: $jlpt"
 		[ "$raw" != "true" ] && echo "https://jisho.org/search/$search"
 	fi
+
+	# Get rid of the cached result if the translation was missing to prevent
+	# "corrupted" cache
+	[ -z "$japanese" ] && _remove_cache "$query"
 }
 
 _printHelp() {
